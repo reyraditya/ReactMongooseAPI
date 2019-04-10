@@ -62,23 +62,32 @@ const userSchema = new mongoose.Schema({
 })
 
 // Berkaitan dengan login
-// userSchema.statics.findByCredentials = async (email, password) => {
-//     // 1. mencari berdasarkan email
-//     const user = User.findOne({ email })
-//     if(!user){ // kalau user ditemukan
-//         throw new Error("Unable to log in")
-//     }
-//     // 2. kalau data user ketemu, dicompare datanya
+userSchema.statics.findByCredentials = async (email, password) => { // Model function
+    // mencari by email
+    const user = await User.findOne({ email })
 
-// }
+    if(!user){
+        throw new Error("Unable to login")
+    }
+    // compare password
+    const isMatch = await bcrypt.compare(password, user.password) // true or false
 
-// Hashing password: middleware
-userSchema.pre('save', async function(next) { //Sebelum save data, kita akan menjalankan function next
-    const user = this // mengakses data user sebelum dilempar ke backend {name, email, age, password}
+    if(!isMatch){
+        throw new Error("Unable to login")
+    }
+
+    return user
+
+}
+
+// Hash password before saving
+userSchema.pre('save', async function(next) {
+    const user = this // akses ke user {name, age, email, password}
 
     user.password = await bcrypt.hash(user.password, 8)
 
-    next() //hashing selesai, lanjutkan ke function berikutnya
+    next()
+
 })
 
 // Buat modelnya

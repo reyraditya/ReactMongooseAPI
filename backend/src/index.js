@@ -12,7 +12,7 @@ app.use(express.json());
 // Register new user
 app.post('/users', async (req, res) => {
     const user = new User(req.body)
-    
+
     try{
         await user.save()
         res.status(200).send(user)
@@ -23,16 +23,27 @@ app.post('/users', async (req, res) => {
 
 
 // Get users in login
-app.get("/users", async (req, res) => {
-    const {email, password} = req.query
+// app.get("/users", async (req, res) => {
+//     const {email, password} = req.query
 
-    try {
-      const users = await User.find({email, password}); // mongoose documentation: Queries > Model.find(), result: array of users
-      res.status(200).send(users); // send array of users by email and password to front end
+//     try {
+//       const users = await User.find({email, password}); // mongoose documentation: Queries > Model.find(), result: array of users
+//       res.status(200).send(users); // send array of users by email and password to front end
+//     } catch (e) {
+//       res.status(500).send(e); //status: internal server error
+//     }
+//   });
+
+app.post('/users/login', async (req, res) => {
+    const {email, password} = req.body
+
+     try {
+        const user = await User.findByCredentials(email, password) // Function buatan sendiri
+        res.status(200).send(user)
     } catch (e) {
-      res.status(500).send(e); //status: internal server error
+        res.status(201).send(e)
     }
-  });
+})
 
 
 app.listen(port, () => {console.log("API Running on port " + port)})
