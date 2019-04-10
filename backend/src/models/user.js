@@ -1,6 +1,8 @@
 const mongoose = require('mongoose');
 const isEmail = require('validator/lib/isEmail');
+const bcrypt = require('bcrypt');
 
+// Model Schemanya
 const userSchema = new mongoose.Schema({
     name: {
         type: String, // type of data, when we type the  number, it will be converted into strings
@@ -59,6 +61,27 @@ const userSchema = new mongoose.Schema({
     timestamps: true 
 })
 
-const User = mongoose.model('User', userSchema)
+// Berkaitan dengan login
+// userSchema.statics.findByCredentials = async (email, password) => {
+//     // 1. mencari berdasarkan email
+//     const user = User.findOne({ email })
+//     if(!user){ // kalau user ditemukan
+//         throw new Error("Unable to log in")
+//     }
+//     // 2. kalau data user ketemu, dicompare datanya
+
+// }
+
+// Hashing password: middleware
+userSchema.pre('save', async function(next) { //Sebelum save data, kita akan menjalankan function next
+    const user = this // mengakses data user sebelum dilempar ke backend {name, email, age, password}
+
+    user.password = await bcrypt.hash(user.password, 8)
+
+    next() //hashing selesai, lanjutkan ke function berikutnya
+})
+
+// Buat modelnya
+const User = mongoose.model('User', userSchema) 
 
 module.exports = User
