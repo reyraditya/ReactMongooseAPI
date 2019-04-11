@@ -64,7 +64,7 @@ app.post('/tasks/:userid', async (req, res) => {
     }
 }) 
 
-// Group tasks sesuai dengan user pemilik tasks
+// Grouping tasks sesuai dengan user pemilik tasks
 app.get('/tasks/:userid', async (req, res) => {
     try {
         // find mengirim dalam bentuk array
@@ -76,5 +76,48 @@ app.get('/tasks/:userid', async (req, res) => {
      }
 })
 
+// Delete tasks
+app.delete('/tasks', async (req, res) => {
+    try {
+        const task = await Task.findOneAndDelete({_id: req.body.id})
+
+         if(!task){
+            return res.status(404).send("Delete failed")
+        }
+
+         res.status(200).send(task)
+    } catch (e) {
+        res.status(500).send(e)
+    }
+})
+
+
+// Edit tasks
+app.patch('/tasks/:taskid/:userid', async (req, res) => {
+    const updates = Object.keys(req.body)
+    const allowedUpdates = ['description', 'completed']
+    const isValidOperation = updates.every(update => allowedUpdates.includes(update))
+
+     if(!isValidOperation) {
+        return res.status(400).send({err: "Invalid request!"})
+    }
+
+     try {
+        const task = await Task.findOne({_id: req.params.taskid, owner: req.params.userid})
+
+         if(!task){
+            return res.status(404).send("Update Request")
+        }
+
+         updates.forEach(update => task[update] = req.body[update])
+        await task.save()
+
+         res.send("update berhasil")
+
+
+     } catch (e) {
+
+     }
+})
 
 app.listen(port, () => {console.log("API Running on port " + port)})
