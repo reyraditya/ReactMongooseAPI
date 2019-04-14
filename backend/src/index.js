@@ -1,6 +1,8 @@
 const express  = require('express');
 const port = require('./config');
 const cors = require('cors');
+const multer = require('multer');
+const sharp = require('sharp');
 const User = require('./models/user');
 const Task = require('./models/task')
 require('./config/mongose');
@@ -43,7 +45,7 @@ app.post('/users/login', async (req, res) => {
         res.status(200).send(user)
         
     } catch (e) {
-        res.status(201).send(e)
+        res.status(404).send(e)
     }
 })
 
@@ -64,12 +66,31 @@ app.post('/tasks/:userid', async (req, res) => {
     }
 }) 
 
+// Delete user and all tasks
+app.delete('/users/:userid', async (req, res) => {
+    try {
+        const user = await User.findByIdAndDelete(req.params.userid)
+        if(!user){
+            throw new Error("unable to delete")
+            
+        }
+        await Task.deleteMany({owner: user._id}).exec()
+        res.send("delete successful")
+    } catch (e) {
+        res.send(e)
+    }
+})
+
 // Grouping tasks sesuai dengan user pemilik tasks
 app.get('/tasks/:userid', async (req, res) => {
     try {
         // find mengirim dalam bentuk array
        const user = await User.find({_id: req.params.userid})
-                    .populate({path:'tasks'}).exec()
+                    .populate({
+                        path:'tasks',
+                        sort: {completed: false},
+                        limit: 5
+                    }).exec()
         res.send(user[0].tasks)
     } catch (e) {
 
@@ -77,20 +98,24 @@ app.get('/tasks/:userid', async (req, res) => {
 })
 
 // Delete tasks
-app.delete('/tasks', async (req, res) => {
+app.delete("/tasks", async (req, res) => {
     try {
-        const task = await Task.findOneAndDelete({_id: req.body.id})
-
-         if(!task){
-            return res.status(404).send("Delete failed")
-        }
-
-         res.status(200).send(task)
+      const task = await Task.findOneAndDelete({ _id: req.body.taskid });
+      const user = await User.findOne({ _id: req.body.owner });
+  
+       if (!task) {
+        return res.status(404).send("Delete failed");
+      }
+    
+      user.tasks = await user.tasks.filter(val => val != req.body.taskid);
+      user.save();
+      console.log(user.tasks);
+  
+      res.status(200).send(task);
     } catch (e) {
-        res.status(500).send(e)
+      res.status(500).send(e);
     }
-})
-
+});
 
 // Edit tasks
 app.patch('/tasks/:taskid/:userid', async (req, res) => {
@@ -119,5 +144,99 @@ app.patch('/tasks/:taskid/:userid', async (req, res) => {
 
      }
 })
+
+// Upload avatar
+const upload = multer({
+    limits:{
+        fileSize: 1000000 // Byte max size
+    },
+    fileFilter(req, file, cb){ 
+        if(!file.originalname.match(/\.(jpg|jpeg|png)$/)) {
+            return cb(new Error('Please upload image file(jpg, jpeg, png'))
+        }
+        // file diterima
+        cb(undefined, true) 
+        // cb (callback), function bawaan dari multer
+        // kalo mau throw error bisa juga 'cb(undefined, false)' tapi ga ada pesan errornya
+    }
+})
+
+app.post('/users/:userid/avatar', upload.single('avatar'), async(req, res) => {
+    try {
+        const buffer = await sharp(req.file.buffer).resize({ width: 250 }).png().toBuffer();
+        const user = await User.findById(req.params.userid); 
+
+        if(!User){
+            throw Error ('Unable to upload')
+        }
+
+        user.avatar = buffer
+        await user.save()
+        res.send('Upload success')
+    } catch (e) {
+        res.send(e)
+    }
+})
+
+// Show avatar
+app.get('/users/:userid/avatar', async(req, res) => {
+    try {
+        const user = await User.findById(req.params.userid);
+
+        if(!user || !user.avatar){
+            throw new Error('Not found')
+        }
+
+        res.set('Content-Type', 'image/png')
+        res.send(user.avatar)
+
+    } catch (e) {
+        res.send(e)
+    }
+})
+
+// Delete avatar
+app.delete('/users/:userid/avatar', async(req, res) => {
+    try {
+        const user = await User.findByIdAndUpdate(req.params.userid, {$set: {avatar: null}});
+
+        if(!user || !user.avatar){
+            throw new Error('Not found')
+        }
+        
+        res.send('avatar has been removed')
+
+    } catch (e) {
+        res.send(e)
+    }
+})
+
+// Edit profile
+app.patch('/users/:userid', async (req, res) => {
+    const updates = Object.keys(req.body)
+    const allowedUpdates = ['name', 'email', 'password', 'age']
+    const isValidOperation = updates.every(update => allowedUpdates.includes(update))
+
+     if(!isValidOperation) {
+        return res.status(400).send({err: "Invalid request!"})
+    }
+
+     try {
+        const user = await User.findOne({_id: req.params.userid})
+
+        if(!user){
+            return res.status(404).send("Update Request")
+        }
+
+        updates.forEach(update => user[update] = req.body[update])
+        await user.save()
+        res.send("Update succeeded")
+
+    } catch(e) {
+
+    }
+})
+
+
 
 app.listen(port, () => {console.log("API Running on port " + port)})
