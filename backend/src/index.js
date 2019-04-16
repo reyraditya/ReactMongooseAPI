@@ -24,7 +24,6 @@ app.post('/users', async (req, res) => {
     }
 });
 
-
 // Login users in login
 // app.get("/users", async (req, res) => {
 //     const {email, password} = req.query
@@ -88,8 +87,8 @@ app.get('/tasks/:userid', async (req, res) => {
        const user = await User.find({_id: req.params.userid})
                     .populate({
                         path:'tasks',
-                        sort: {completed: false},
-                        limit: 5
+                        options: { sort: {completed: false},
+                        limit: 5}
                     }).exec()
         res.send(user[0].tasks)
     } catch (e) {
@@ -179,7 +178,7 @@ app.post('/users/:userid/avatar', upload.single('avatar'), async(req, res) => {
 })
 
 // Show avatar
-app.get('/users/:userid/avatar', async(req, res) => {
+app.get('/users/:userid/avatar/:ava', async(req, res) => {
     try {
         const user = await User.findById(req.params.userid);
 
@@ -196,7 +195,7 @@ app.get('/users/:userid/avatar', async(req, res) => {
 })
 
 // Delete avatar
-app.delete('/users/:userid/avatar', async(req, res) => {
+app.delete('/users/:userid/avatar/:ava', async(req, res) => {
     try {
         const user = await User.findByIdAndUpdate(req.params.userid, {$set: {avatar: null}});
 
@@ -212,10 +211,18 @@ app.delete('/users/:userid/avatar', async(req, res) => {
 })
 
 // Edit profile
-app.patch('/users/:userid', async (req, res) => {
-    const updates = Object.keys(req.body)
-    const allowedUpdates = ['name', 'email', 'password', 'age']
-    const isValidOperation = updates.every(update => allowedUpdates.includes(update))
+app.patch('/users/:userid', async (req, res) => { 
+    const {password} = req.body
+    if(password === ''){
+        var updates = Object.keys(req.body)
+        var allowedUpdates = ['name', 'email', 'age']
+        var  isValidOperation = updates.every(update => allowedUpdates.includes(update))
+    } else {
+        var updates = Object.keys(req.body)
+        var allowedUpdates = ['name', 'email', 'password', 'age']
+        var isValidOperation = updates.every(update => allowedUpdates.includes(update))
+    }
+    
 
      if(!isValidOperation) {
         return res.status(400).send({err: "Invalid request!"})
@@ -230,7 +237,7 @@ app.patch('/users/:userid', async (req, res) => {
 
         updates.forEach(update => user[update] = req.body[update])
         await user.save()
-        res.send("Update succeeded")
+        res.send(user)
 
     } catch(e) {
 
