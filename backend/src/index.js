@@ -211,6 +211,25 @@ app.delete('/users/:userid/avatar/:ava', async(req, res) => {
 })
 
 // Edit profile
+// app.get('/users/me/:userid', async (req, res) => { // READ PROFILE, untuk Profile.js
+//     try {
+//        const user = await User.findById(req.params.userid)
+//        res.send({
+//             photo: `http://localhost:2009/users/${user._id}/avatar`,
+//             user: user
+//        })
+//     } catch (e) {
+//         res.send(e)
+//     }
+// })
+
+// // Update Profile
+// app.post('/editprofile/:userid', upload.single('avatar'),async (req, res) => { 
+
+
+
+// })
+
 app.patch('/users/:userid', async (req, res) => { 
     const {password} = req.body
     if(password === ''){
@@ -243,6 +262,7 @@ app.patch('/users/:userid', async (req, res) => {
 
     }
 })
+
 
 
 
