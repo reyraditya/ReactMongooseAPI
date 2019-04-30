@@ -11,6 +11,9 @@ require('./config/mongose');
 const app = express();
 app.use(cors())
 app.use(express.json());
+app.get("/", (req, res) => {
+    res.send(`<h1>API running on Heroku port ${port}</h1>`)
+})
 
 // Register new user
 app.post('/users', async (req, res) => {
